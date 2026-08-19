@@ -39,7 +39,7 @@
 
     function restart() {
       clearTimeout(timer);
-      roles = I18N.t("home.roles");
+      roles = I18n.t("home.roles");
       if (!Array.isArray(roles)) roles = I18N.zh["home.roles"];
       target.textContent = "";
       char = 0;
