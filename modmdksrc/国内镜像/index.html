@@ -1,0 +1,2148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>模组 MDK 镜像替换工具 (Forge/NeoForge/Cleanroom/Quilt/Fabric/LiteLoader)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js">
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f6f8fc;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #1e293b;
+        }
+
+        .container {
+            max-width: 960px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 28px;
+            box-shadow: 0 20px 60px rgba(0, 20, 40, 0.08);
+            padding: 40px 42px 38px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 8px;
+        }
+
+        .header-icon {
+            width: 44px;
+            height: 44px;
+            background: #eef2ff;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .subtitle {
+            font-size: 15px;
+            color: #64748b;
+            margin-bottom: 24px;
+            padding-left: 58px;
+            line-height: 1.5;
+        }
+
+        .subtitle strong {
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #e9edf4;
+            padding-bottom: 0;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 10px 16px;
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 500;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            border-radius: 0;
+        }
+
+        .tab-btn:hover {
+            color: #475569;
+        }
+
+        .tab-btn.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .import-section {
+            background: #f8fafc;
+            border: 1px solid #e9edf4;
+            border-radius: 16px;
+            padding: 16px 20px 20px;
+            margin-bottom: 20px;
+        }
+
+        .import-section .import-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .import-section .import-title .arrow {
+            transition: transform 0.2s;
+            display: inline-block;
+        }
+
+        .import-section .import-title .arrow.open {
+            transform: rotate(90deg);
+        }
+
+        .import-body {
+            display: none;
+            margin-top: 8px;
+        }
+
+        .import-body.open {
+            display: block;
+        }
+
+        .import-body textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px 14px;
+            border: 1.5px solid #d1d9e6;
+            border-radius: 10px;
+            font-size: 13px;
+            font-family: 'JetBrains Mono', monospace;
+            resize: vertical;
+            background: #fff;
+            transition: border-color 0.2s;
+        }
+
+        .import-body textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .import-body .import-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .import-body .import-actions button {
+            padding: 8px 24px;
+            border: none;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .import-body .import-actions .btn-apply {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        .import-body .import-actions .btn-apply:hover {
+            background: #2563eb;
+        }
+
+        .import-body .import-actions .btn-reset-import {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .import-body .import-actions .btn-reset-import:hover {
+            background: #e2e8f0;
+        }
+
+        .import-body .import-status {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .import-body .import-status.success {
+            color: #16a34a;
+        }
+
+        .import-body .import-status.error {
+            color: #dc2626;
+        }
+
+        .import-body .hint-text {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-top: 8px;
+            background: #f1f5f9;
+            padding: 8px 14px;
+            border-radius: 8px;
+            border-left: 4px solid #94a3b8;
+        }
+
+        .import-body .hint-text code {
+            background: #e9edf4;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .import-body .hint-text a {
+            color: #3b82f6;
+            text-decoration: underline;
+        }
+
+        .download-section {
+            background: #f0f7ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 16px;
+            padding: 20px 24px 24px;
+            margin-bottom: 28px;
+        }
+
+        .download-section .section-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1e40af;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .download-section .section-title .badge-new {
+            font-size: 11px;
+            font-weight: 500;
+            background: #3b82f6;
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 40px;
+        }
+
+        .download-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .download-row .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1 1 160px;
+        }
+
+        .download-row .field-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .download-row .field-group select,
+        .download-row .field-group input {
+            padding: 8px 14px;
+            border: 1.5px solid #d1d9e6;
+            border-radius: 10px;
+            font-size: 14px;
+            width: 100%;
+            background: #fff;
+            transition: border-color 0.2s;
+        }
+
+        .download-row .field-group select:focus,
+        .download-row .field-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .download-row .field-group select:disabled,
+        .download-row .field-group input:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .download-row .btn-download-link {
+            padding: 10px 28px;
+            background: #22c55e;
+            color: #fff;
+            border: none;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            align-self: flex-end;
+            margin-top: 4px;
+            text-decoration: none;
+        }
+
+        .download-row .btn-download-link:hover {
+            background: #16a34a;
+        }
+
+        .download-row .btn-download-link:active {
+            transform: scale(0.97);
+        }
+
+        .download-row .btn-download-link:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .manual-input-area {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #d1d9e6;
+        }
+
+        .manual-input-area .manual-title {
+            font-size: 13px;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .download-hint {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .download-hint .status-text {
+            color: #3b82f6;
+            font-weight: 500;
+        }
+
+        .refresh-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .refresh-area .btn-refresh {
+            padding: 6px 18px;
+            background: #8b5cf6;
+            color: #fff;
+            border: none;
+            border-radius: 40px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .refresh-area .btn-refresh:hover {
+            background: #7c3aed;
+        }
+
+        .refresh-area .btn-refresh:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .refresh-area .refresh-status {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .refresh-area .refresh-status.success {
+            color: #16a34a;
+        }
+
+        .refresh-area .refresh-status.error {
+            color: #dc2626;
+        }
+
+        .button-section {
+            background: #fafafa;
+            border: 1px solid #e9edf4;
+            border-radius: 16px;
+            padding: 30px 24px;
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .button-section .icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .button-section h3 {
+            font-size: 20px;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .button-section p {
+            color: #64748b;
+            max-width: 600px;
+            margin: 0 auto 16px;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .button-section .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .button-section .btn-custom {
+            display: inline-block;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 40px;
+            font-size: 15px;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            color: #fff;
+            background: #0ea5e9;
+        }
+
+        .button-section .btn-custom:hover {
+            transform: scale(1.02);
+            filter: brightness(0.9);
+        }
+
+        .button-section .btn-custom.quilt {
+            background: #8b5cf6;
+        }
+
+        .button-section .btn-custom.fabric {
+            background: #ec4899;
+        }
+
+        .button-section .btn-custom.liteloader {
+            background: #f59e0b;
+        }
+
+        .button-section .footnote {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-top: 16px;
+        }
+
+        .drop-zone {
+            border: 2px dashed #d1d9e6;
+            border-radius: 20px;
+            padding: 40px 28px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.25s, background 0.2s;
+            background: #fafcff;
+            position: relative;
+            margin-top: 8px;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: #3b82f6;
+            background: #f0f7ff;
+        }
+
+        .drop-zone .icon {
+            font-size: 40px;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .drop-zone .main-text {
+            font-size: 17px;
+            font-weight: 500;
+            color: #0f172a;
+        }
+
+        .drop-zone .hint {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .drop-zone .browse-btn {
+            display: inline-block;
+            margin-top: 14px;
+            padding: 8px 24px;
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .drop-zone .browse-btn:hover {
+            background: #2563eb;
+        }
+
+        .drop-zone input[type="file"] {
+            display: none;
+        }
+
+        .file-card {
+            display: none;
+            margin-top: 20px;
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 16px 22px;
+            border: 1px solid #e9edf4;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .file-card.visible {
+            display: flex;
+        }
+
+        .file-card .file-icon {
+            font-size: 26px;
+            flex-shrink: 0;
+        }
+
+        .file-card .file-info {
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .file-card .file-name {
+            font-weight: 500;
+            color: #0f172a;
+            word-break: break-all;
+        }
+
+        .file-card .file-size {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        .file-card .file-status {
+            font-size: 13px;
+            padding: 4px 14px;
+            border-radius: 40px;
+            background: #e9edf4;
+            color: #475569;
+            white-space: nowrap;
+        }
+
+        .file-card .file-status.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .file-card .file-status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .file-card .file-status.info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .diff-section {
+            display: none;
+            margin-top: 20px;
+            background: #f8fafc;
+            border-radius: 16px;
+            border: 1px solid #e9edf4;
+            padding: 18px 22px 20px;
+        }
+
+        .diff-section.visible {
+            display: block;
+        }
+
+        .diff-section .diff-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .diff-section .diff-title .badge {
+            font-size: 11px;
+            font-weight: 500;
+            background: #e9edf4;
+            padding: 2px 10px;
+            border-radius: 40px;
+            color: #475569;
+        }
+
+        .diff-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px 14px;
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #eef2f6;
+            margin-bottom: 10px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 14px;
+            word-break: break-all;
+        }
+
+        .diff-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .diff-row .label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #94a3b8;
+            font-family: system-ui, -apple-system, sans-serif;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .diff-row .old-url {
+            color: #dc2626;
+            background: #fef2f2;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border-left: 4px solid #dc2626;
+        }
+
+        .diff-row .new-url {
+            color: #16a34a;
+            background: #f0fdf4;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border-left: 4px solid #16a34a;
+        }
+
+        .diff-row .url-text {
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+        }
+
+        .actions {
+            display: none;
+            margin-top: 22px;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .actions.visible {
+            display: flex;
+        }
+
+        .actions .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 28px;
+            border: none;
+            border-radius: 40px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f1f5f9;
+            color: #1e293b;
+            text-decoration: none;
+            flex: 1 1 auto;
+            justify-content: center;
+            min-width: 140px;
+        }
+
+        .actions .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .actions .btn:active {
+            transform: translateY(0);
+        }
+
+        .actions .btn-primary {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        .actions .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .actions .btn-success {
+            background: #22c55e;
+            color: #fff;
+        }
+
+        .actions .btn-success:hover {
+            background: #16a34a;
+        }
+
+        .actions .btn-outline {
+            background: transparent;
+            border: 1.5px solid #d1d9e6;
+        }
+
+        .actions .btn-outline:hover {
+            border-color: #94a3b8;
+            background: #f8fafc;
+        }
+
+        .actions .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .toast {
+            display: none;
+            margin-top: 18px;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            background: #f1f5f9;
+            color: #1e293b;
+            border: 1px solid #e9edf4;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toast.visible {
+            display: flex;
+        }
+
+        .toast .toast-icon {
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .toast .toast-msg {
+            flex: 1;
+            line-height: 1.5;
+        }
+
+        .toast.success {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+
+        .toast.error {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+
+        .toast.info {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1e40af;
+        }
+
+        .footer {
+            margin-top: 28px;
+            padding-top: 16px;
+            border-top: 1px solid #eef2f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        .footer .fs-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #f1f5f9;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 12px;
+            color: #475569;
+        }
+
+        .link-container {
+            margin-top: 12px;
+            display: none;
+        }
+
+        .link-container .link-box {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 12px 16px;
+            border: 1px solid #e9edf4;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .link-container .link-box .label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1e293b;
+            white-space: nowrap;
+        }
+
+        .link-container .link-box a {
+            flex: 1;
+            word-break: break-all;
+            color: #3b82f6;
+            text-decoration: underline;
+            font-size: 14px;
+        }
+
+        .link-container .link-box .copy-btn {
+            padding: 6px 16px;
+            background: #e9edf4;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .link-container .link-box .copy-btn:hover {
+            background: #d1d9e6;
+        }
+
+        .link-container .tip {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #64748b;
+            background: #fef3c7;
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid #fcd34d;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 20px 16px;
+                border-radius: 20px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .subtitle {
+                padding-left: 0;
+                font-size: 14px;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
+
+            .tab-btn {
+                flex: 1 1 16%;
+                text-align: center;
+                padding: 8px 4px;
+                font-size: 11px;
+            }
+
+            .import-section {
+                padding: 12px 14px;
+            }
+
+            .download-section {
+                padding: 16px;
+            }
+
+            .download-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .download-row .field-group {
+                flex: 1 1 auto;
+            }
+
+            .download-row .btn-download-link {
+                justify-content: center;
+                align-self: stretch;
+            }
+
+            .button-section {
+                padding: 20px 16px;
+            }
+
+            .button-section .btn-group {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .button-section .btn-custom {
+                width: 80%;
+            }
+
+            .drop-zone {
+                padding: 28px 16px;
+            }
+
+            .drop-zone .icon {
+                font-size: 32px;
+            }
+
+            .drop-zone .main-text {
+                font-size: 16px;
+            }
+
+            .diff-row {
+                font-size: 13px;
+                padding: 8px 12px;
+            }
+
+            .actions .btn {
+                padding: 10px 18px;
+                font-size: 14px;
+                min-width: 100px;
+                flex: 1 1 100%;
+            }
+
+            .file-card {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+
+            .footer {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 12px 10px;
+            }
+
+            .diff-row .url-text {
+                font-size: 12px;
+            }
+
+            .actions .btn {
+                font-size: 13px;
+                padding: 10px 14px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container" id="app">
+        <div class="header">
+            <div class="header-icon">⚙️</div>
+            <h1>模组 MDK 镜像替换工具</h1>
+        </div>
+        <div class="subtitle">
+            支持 <strong>Forge · NeoForge · Cleanroom · Quilt · Fabric · LiteLoader</strong> ｜获取下载链接 → 下载 ZIP → 拖拽替换镜像
+            <br /><span style="font-size:13px;color:#94a3b8;">NeoForge 版本来源于 GitHub 组织 NeoForgeMDKs · 其他模版提供官方下载</span>
+        </div>
+
+        <!-- 标签页 -->
+        <div class="tabs" id="tabs">
+            <button class="tab-btn active" data-tab="forge">🔥 Forge</button>
+            <button class="tab-btn" data-tab="neoforge">⚡ NeoForge</button>
+            <button class="tab-btn" data-tab="cleanroom">🧹 Cleanroom</button>
+            <button class="tab-btn" data-tab="quilt">🧶 Quilt</button>
+            <button class="tab-btn" data-tab="fabric">🧵 Fabric</button>
+            <button class="tab-btn" data-tab="liteloader">📦 LiteLoader</button>
+        </div>
+
+        <!-- ======================== Forge ======================== -->
+        <div class="tab-content active" id="forge">
+            <div class="import-section">
+                <div class="import-title" data-import-toggle="forge">
+                    <span class="arrow" data-import-arrow="forge">▶</span>
+                    📥 导入 Forge 版本映射（粘贴 JSON）
+                </div>
+                <div class="import-body" data-import-body="forge">
+                    <div class="hint-text">
+                        <strong>步骤：</strong><br />
+                        1. 访问 <a href="https://files.minecraftforge.net/net/minecraftforge/forge/maven-metadata.json"
+                            target="_blank">maven-metadata.json</a><br />
+                        2. 全选复制 JSON 内容<br />
+                        3. 粘贴并点击 <strong>“应用导入”</strong>
+                        <br /><span style="font-size:12px;color:#e74c3c;">⚠️ 注意：Forge 标签页不内置任何版本，您必须导入或手动输入。</span>
+                    </div>
+                    <textarea data-import-area="forge" placeholder="粘贴 JSON 数据..."></textarea>
+                    <div class="import-actions">
+                        <button class="btn-apply" data-import-apply="forge">✅ 应用导入</button>
+                        <button class="btn-reset-import" data-import-reset="forge">↺ 清空数据</button>
+                    </div>
+                    <div class="import-status" data-import-status="forge"></div>
+                </div>
+            </div>
+
+            <div class="download-section">
+                <div class="section-title">
+                    ⬇️ Forge MDK
+                    <span class="badge-new">需导入或手动输入</span>
+                </div>
+                <div class="download-row">
+                    <div class="field-group">
+                        <label>Minecraft 版本</label>
+                        <select data-mc-select="forge">
+                            <option value="">请导入或手动输入</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label>Forge 构建号</label>
+                        <select data-build-select="forge" disabled>
+                            <option value="">请先选择 MC 版本</option>
+                        </select>
+                    </div>
+                    <button class="btn-download-link" data-generate-btn="forge" disabled>🔗 生成下载链接</button>
+                </div>
+                <div class="manual-input-area">
+                    <div class="manual-title">✏️ 手动输入（列表中没有时）</div>
+                    <div class="download-row" style="margin-top:8px;">
+                        <div class="field-group">
+                            <label>MC 版本</label>
+                            <input type="text" data-manual-mc="forge" placeholder="例如 1.20.1" />
+                        </div>
+                        <div class="field-group">
+                            <label>构建号</label>
+                            <input type="text" data-manual-build="forge" placeholder="例如 47.3.0" />
+                        </div>
+                        <button class="btn-download-link" data-manual-generate="forge" style="background:#8b5cf6;">🔗
+                            手动生成链接</button>
+                    </div>
+                </div>
+                <div class="link-container" data-link-container="forge">
+                    <div class="link-box">
+                        <span class="label">📥 下载链接：</span>
+                        <a data-download-link="forge" href="#" target="_blank"></a>
+                        <button class="copy-btn" data-copy-link="forge">📋 复制</button>
+                    </div>
+                    <div class="tip">点击链接下载 ZIP，然后拖拽到下方区域替换镜像</div>
+                </div>
+                <div class="download-hint">
+                    <span>📋 当前版本数：</span>
+                    <span class="status-text" data-version-count="forge">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================== NeoForge ======================== -->
+        <div class="tab-content" id="neoforge">
+            <div class="refresh-area">
+                <button class="btn-refresh" id="refreshNeoForgeBtn">🔄 刷新 NeoForge 版本列表</button>
+                <span class="refresh-status" id="neoforgeRefreshStatus">从 GitHub 获取最新...</span>
+            </div>
+
+            <div class="download-section">
+                <div class="section-title">
+                    ⬇️ NeoForge MDK
+                    <span class="badge-new">GitHub 实时</span>
+                </div>
+                <div class="download-row">
+                    <div class="field-group">
+                        <label>Minecraft 版本</label>
+                        <select data-mc-select="neoforge">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label>插件类型</label>
+                        <select data-plugin-select="neoforge" disabled>
+                            <option value="">请先选择 MC 版本</option>
+                        </select>
+                    </div>
+                    <button class="btn-download-link" data-generate-btn="neoforge" disabled>🔗 生成下载链接</button>
+                </div>
+                <div class="manual-input-area">
+                    <div class="manual-title">✏️ 手动输入（列表中没有时）</div>
+                    <div class="download-row" style="margin-top:8px;">
+                        <div class="field-group">
+                            <label>MC 版本</label>
+                            <input type="text" data-manual-mc="neoforge" placeholder="例如 1.21.1" />
+                        </div>
+                        <div class="field-group">
+                            <label>构建号</label>
+                            <input type="text" data-manual-build="neoforge" placeholder="例如 21.0.0-beta" />
+                        </div>
+                        <button class="btn-download-link" data-manual-generate="neoforge" style="background:#8b5cf6;">🔗
+                            手动生成链接</button>
+                    </div>
+                </div>
+                <div class="link-container" data-link-container="neoforge">
+                    <div class="link-box">
+                        <span class="label">📥 下载链接：</span>
+                        <a data-download-link="neoforge" href="#" target="_blank"></a>
+                        <button class="copy-btn" data-copy-link="neoforge">📋 复制</button>
+                    </div>
+                    <div class="tip">点击链接下载 ZIP，然后拖拽到下方区域替换镜像</div>
+                </div>
+                <div class="download-hint">
+                    <span>📋 当前版本数：</span>
+                    <span class="status-text" data-version-count="neoforge">加载中...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================== Cleanroom ======================== -->
+        <div class="tab-content" id="cleanroom">
+            <div class="button-section">
+                <span class="icon">🧹</span>
+                <h3>Cleanroom MDK</h3>
+                <p>
+                    Cleanroom 是 Minecraft 1.12.2 的现代化 Forge 分支，支持 Java 17+ 和新的构建工具。<br />
+                    社区提供了两种官方模板，点击下方按钮即可下载 ZIP。
+                </p>
+                <div class="btn-group">
+                    <a href="https://github.com/CleanroomMC/ForgeDevEnv/archive/refs/heads/main.zip" target="_blank"
+                        class="btn-custom" style="background:#0ea5e9;" download>
+                        📦 ForgeDevEnv
+                    </a>
+                    <a href="https://github.com/CleanroomMC/CleanroomModTemplate/archive/refs/heads/main.zip"
+                        target="_blank" class="btn-custom" style="background:#f59e0b;" download>
+                        📦 CleanroomModTemplate
+                    </a>
+                </div>
+                <p class="footnote">
+                    下载后请将 ZIP 拖拽到下方的区域进行镜像替换。
+                </p>
+            </div>
+        </div>
+
+        <!-- ======================== Quilt ======================== -->
+        <div class="tab-content" id="quilt">
+            <div class="button-section">
+                <span class="icon">🧶</span>
+                <h3>Quilt MDK</h3>
+                <p>
+                    Quilt 是基于 Fabric 的现代化模组加载器，兼容大部分 Fabric 模组。<br />
+                    官方提供了 Java 和 Kotlin 两种模板，点击按钮即可下载。
+                </p>
+                <div class="btn-group">
+                    <a href="https://github.com/QuiltMC/quilt-template-mod/archive/refs/heads/main.zip" target="_blank"
+                        class="btn-custom quilt" download>
+                        📦 Java 模板
+                    </a>
+                    <a href="https://github.com/QuiltMC/quilt-kotlin-template-mod/archive/refs/heads/main.zip"
+                        target="_blank" class="btn-custom quilt" download>
+                        📦 Kotlin 模板
+                    </a>
+                </div>
+                <p class="footnote">
+                    下载后请将 ZIP 拖拽到下方的区域进行镜像替换。
+                </p>
+            </div>
+        </div>
+
+        <!-- ======================== Fabric ======================== -->
+        <div class="tab-content" id="fabric">
+            <div class="button-section">
+                <span class="icon">🧵</span>
+                <h3>Fabric MDK</h3>
+                <p>
+                    Fabric 官方推荐使用模板生成器来创建项目，也可直接下载官方示例模组。<br />
+                    生成或下载后，将 ZIP 拖拽到下方区域即可替换镜像源。
+                </p>
+                <div class="btn-group">
+                    <a href="https://fabricmc.net/develop/template/" target="_blank" class="btn-custom fabric">
+                        🚀 前往模板生成器
+                    </a>
+                    <a href="https://github.com/FabricMC/fabric-example-mod/archive/refs/heads/main.zip" target="_blank"
+                        class="btn-custom fabric" download>
+                        📦 下载官方示例
+                    </a>
+                </div>
+                <p class="footnote">
+                    下载后请将 ZIP 拖拽到下方的区域进行镜像替换。
+                </p>
+            </div>
+        </div>
+
+        <!-- ======================== LiteLoader ======================== -->
+        <div class="tab-content" id="liteloader">
+            <div class="button-section">
+                <span class="icon">📦</span>
+                <h3>LiteLoader MDK</h3>
+                <p>
+                    LiteLoader 是轻量级客户端模组加载器，支持 1.5.2 ~ 1.12.2。<br />
+                    方式一：访问 MDK 官网选择对应版本的 ZIP 包下载。<br />
+                    方式二：直接下载官方示例模组 ZIP。
+                </p>
+                <div class="btn-group">
+                    <a href="http://mdk.liteloader.com/" target="_blank" class="btn-custom liteloader">
+                        🌐 前往 MDK 官网
+                    </a>
+                    <a href="http://develop.liteloader.com/liteloader/ExampleMod/archive/master.zip" target="_blank"
+                        class="btn-custom liteloader" download>
+                        📦 下载示例模组
+                    </a>
+                </div>
+                <p class="footnote">
+                    下载后请将 ZIP 拖拽到下方的区域进行镜像替换。
+                </p>
+            </div>
+        </div>
+
+        <!-- ===== 共享的 ZIP 处理区域 ===== -->
+        <div class="drop-zone" id="dropZone">
+            <span class="icon">📂</span>
+            <div class="main-text">拖拽已下载的 ZIP 到这里（自动识别加载器）</div>
+            <div class="hint">或点击浏览选择文件 · 支持 .zip 格式</div>
+            <button class="browse-btn" id="browseBtn">浏览文件</button>
+            <input type="file" id="fileInput" accept=".zip" />
+        </div>
+
+        <div class="file-card" id="fileCard">
+            <span class="file-icon">📄</span>
+            <div class="file-info">
+                <div class="file-name" id="fileName">未命名.zip</div>
+                <div class="file-size" id="fileSize">0 KB</div>
+            </div>
+            <span class="file-status" id="fileStatus">⏳ 处理中...</span>
+        </div>
+
+        <div class="diff-section" id="diffSection">
+            <div class="diff-title">
+                📝 修改内容
+                <span class="badge" id="versionBadge">Gradle 版本</span>
+            </div>
+            <div class="diff-row">
+                <div class="label">🔴 原始地址</div>
+                <div class="old-url url-text" id="oldUrl">https://services.gradle.org/distributions/gradle-xxx.zip</div>
+            </div>
+            <div class="diff-row">
+                <div class="label">🟢 新地址 (腾讯云)</div>
+                <div class="new-url url-text" id="newUrl">https\://mirrors.cloud.tencent.com/gradle/gradle-xxx.zip</div>
+            </div>
+        </div>
+
+        <div class="actions" id="actions">
+            <button class="btn btn-primary" id="downloadBtn">⬇️ 下载新 ZIP</button>
+            <button class="btn btn-success" id="replaceBtn">🔄 替换原文件</button>
+            <button class="btn btn-outline" id="resetBtn">↺ 重新选择</button>
+        </div>
+
+        <div class="toast" id="toast">
+            <span class="toast-icon" id="toastIcon">ℹ️</span>
+            <span class="toast-msg" id="toastMsg">就绪</span>
+        </div>
+
+        <div class="footer">
+            <span>🛠️ 支持 Forge / NeoForge / Cleanroom / Quilt / Fabric / LiteLoader</span>
+            <span class="fs-badge">📁 JSZip · 纯静态</span>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            'use strict';
+
+            // ========== 内置数据（Forge 清空，NeoForge 保留内置） ==========
+            const BUILTIN = {
+                forge: {}, // 强制用户导入或手动输入
+                neoforge: {
+                    "1.21.1": ["ModDevGradle", "NeoGradle"],
+                    "1.21": ["ModDevGradle", "NeoGradle"],
+                    "1.20.6": ["ModDevGradle", "NeoGradle"],
+                    "1.20.5": ["ModDevGradle", "NeoGradle"],
+                    "1.20.4": ["ModDevGradle", "NeoGradle"],
+                    "1.20.2": ["ModDevGradle", "NeoGradle"],
+                    "1.20.1": ["ModDevGradle", "NeoGradle"],
+                    "1.19.4": ["ModDevGradle", "NeoGradle"],
+                    "1.19.2": ["ModDevGradle", "NeoGradle"],
+                    "1.18.2": ["ModDevGradle", "NeoGradle"],
+                    "1.17.1": ["ModDevGradle", "NeoGradle"],
+                    "1.16.5": ["ModDevGradle", "NeoGradle"]
+                }
+            };
+
+            // ========== DOM 引用 ==========
+            const tabs = document.querySelectorAll('.tab-btn');
+            const tabContents = {
+                forge: document.getElementById('forge'),
+                neoforge: document.getElementById('neoforge'),
+                cleanroom: document.getElementById('cleanroom'),
+                quilt: document.getElementById('quilt'),
+                fabric: document.getElementById('fabric'),
+                liteloader: document.getElementById('liteloader')
+            };
+
+            const loaders = ['forge', 'neoforge'];
+            const dataStore = {};
+            loaders.forEach(loader => {
+                dataStore[loader] = JSON.parse(JSON.stringify(BUILTIN[loader]));
+            });
+
+            // ========== 通用 DOM 获取函数 ==========
+            function getEl(loader, suffix) {
+                return document.querySelector(`[data-${suffix}="${loader}"]`);
+            }
+
+            // ========== 填充 Forge（无内置，显示提示） ==========
+            function populateForge() {
+                const loader = 'forge';
+                const data = dataStore[loader];
+                const mcSelect = getEl(loader, 'mc-select');
+                const buildSelect = getEl(loader, 'build-select');
+                const versionCount = getEl(loader, 'version-count');
+                const generateBtn = getEl(loader, 'generate-btn');
+
+                const keys = Object.keys(data);
+                if (keys.length === 0) {
+                    mcSelect.innerHTML = '<option value="">请导入或手动输入</option>';
+                    buildSelect.disabled = true;
+                    buildSelect.innerHTML = '<option value="">无数据</option>';
+                    generateBtn.disabled = true;
+                    versionCount.textContent = '0';
+                    return;
+                }
+
+                const mcVersions = keys.sort((a, b) => {
+                    const pa = a.split('.').map(Number);
+                    const pb = b.split('.').map(Number);
+                    const maxLen = Math.max(pa.length, pb.length);
+                    for (let i = 0; i < maxLen; i++) {
+                        const va = i < pa.length ? pa[i] : 0;
+                        const vb = i < pb.length ? pb[i] : 0;
+                        if (va !== vb) return vb - va;
+                    }
+                    return 0;
+                });
+
+                mcSelect.innerHTML = '<option value="">请选择</option>';
+                mcVersions.forEach(ver => {
+                    const opt = document.createElement('option');
+                    opt.value = ver;
+                    opt.textContent = ver;
+                    mcSelect.appendChild(opt);
+                });
+
+                if (mcVersions.length > 0) {
+                    mcSelect.value = mcVersions[0];
+                    updateForgeBuilds(loader, mcVersions[0]);
+                } else {
+                    buildSelect.disabled = true;
+                    buildSelect.innerHTML = '<option value="">无可用版本</option>';
+                    generateBtn.disabled = true;
+                }
+
+                versionCount.textContent = `${mcVersions.length}`;
+                mcSelect.disabled = false;
+            }
+
+            function updateForgeBuilds(loader, mcVersion) {
+                const data = dataStore[loader];
+                const buildSelect = getEl(loader, 'build-select');
+                const generateBtn = getEl(loader, 'generate-btn');
+
+                if (!mcVersion) {
+                    buildSelect.disabled = true;
+                    buildSelect.innerHTML = '<option value="">请先选择 MC 版本</option>';
+                    generateBtn.disabled = true;
+                    return;
+                }
+
+                const builds = data[mcVersion] || [];
+                if (builds.length === 0) {
+                    buildSelect.innerHTML = '<option value="">该版本暂无构建号</option>';
+                    buildSelect.disabled = true;
+                    generateBtn.disabled = true;
+                    return;
+                }
+
+                const sorted = builds.sort((a, b) => {
+                    const getNum = (s) => {
+                        const match = s.match(/(\d+\.\d+\.\d+)/);
+                        return match ? match[1] : s;
+                    };
+                    const pa = getNum(a).split('.').map(Number);
+                    const pb = getNum(b).split('.').map(Number);
+                    const maxLen = Math.max(pa.length, pb.length);
+                    for (let i = 0; i < maxLen; i++) {
+                        const va = i < pa.length ? pa[i] : 0;
+                        const vb = i < pb.length ? pb[i] : 0;
+                        if (va !== vb) return vb - va;
+                    }
+                    return 0;
+                });
+
+                buildSelect.innerHTML = '';
+                sorted.forEach(build => {
+                    const opt = document.createElement('option');
+                    opt.value = build;
+                    opt.textContent = build;
+                    buildSelect.appendChild(opt);
+                });
+
+                buildSelect.disabled = false;
+                generateBtn.disabled = false;
+            }
+
+            // ========== 填充 NeoForge ==========
+            function populateNeoForge(data) {
+                const loader = 'neoforge';
+                const mcSelect = getEl(loader, 'mc-select');
+                const pluginSelect = getEl(loader, 'plugin-select');
+                const versionCount = getEl(loader, 'version-count');
+                const generateBtn = getEl(loader, 'generate-btn');
+
+                const keys = Object.keys(data);
+                const mcVersions = keys.sort((a, b) => {
+                    const pa = a.split('.').map(Number);
+                    const pb = b.split('.').map(Number);
+                    const maxLen = Math.max(pa.length, pb.length);
+                    for (let i = 0; i < maxLen; i++) {
+                        const va = i < pa.length ? pa[i] : 0;
+                        const vb = i < pb.length ? pb[i] : 0;
+                        if (va !== vb) return vb - va;
+                    }
+                    return 0;
+                });
+
+                mcSelect.innerHTML = '<option value="">请选择</option>';
+                mcVersions.forEach(ver => {
+                    const opt = document.createElement('option');
+                    opt.value = ver;
+                    opt.textContent = ver;
+                    mcSelect.appendChild(opt);
+                });
+
+                if (mcVersions.length > 0) {
+                    mcSelect.value = mcVersions[0];
+                    updateNeoForgePlugins(data, mcVersions[0]);
+                } else {
+                    pluginSelect.disabled = true;
+                    pluginSelect.innerHTML = '<option value="">无可用版本</option>';
+                    generateBtn.disabled = true;
+                }
+
+                versionCount.textContent = `当前 ${mcVersions.length} 个版本`;
+                mcSelect.disabled = false;
+            }
+
+            function updateNeoForgePlugins(data, mcVersion) {
+                const loader = 'neoforge';
+                const pluginSelect = getEl(loader, 'plugin-select');
+                const generateBtn = getEl(loader, 'generate-btn');
+
+                if (!mcVersion) {
+                    pluginSelect.disabled = true;
+                    pluginSelect.innerHTML = '<option value="">请先选择 MC 版本</option>';
+                    generateBtn.disabled = true;
+                    return;
+                }
+
+                const plugins = data[mcVersion] || [];
+                if (plugins.length === 0) {
+                    pluginSelect.innerHTML = '<option value="">该版本暂无模板</option>';
+                    pluginSelect.disabled = true;
+                    generateBtn.disabled = true;
+                    return;
+                }
+
+                pluginSelect.innerHTML = '';
+                plugins.forEach(plugin => {
+                    const opt = document.createElement('option');
+                    opt.value = plugin;
+                    opt.textContent = plugin;
+                    pluginSelect.appendChild(opt);
+                });
+
+                pluginSelect.disabled = false;
+                generateBtn.disabled = false;
+            }
+
+            // ========== 生成下载链接 ==========
+            function generateForgeLink() {
+                const loader = 'forge';
+                const mcSelect = getEl(loader, 'mc-select');
+                const buildSelect = getEl(loader, 'build-select');
+                const linkContainer = getEl(loader, 'link-container');
+                const downloadLink = getEl(loader, 'download-link');
+
+                const mcVer = mcSelect.value;
+                const build = buildSelect.value;
+                if (!mcVer || !build) {
+                    showToast('请选择完整的版本信息', 'error', '❌');
+                    return;
+                }
+
+                const url =
+                    `https://files.minecraftforge.net/maven/net/minecraftforge/forge/${build}/forge-${build}-mdk.zip`;
+                downloadLink.href = url;
+                downloadLink.textContent = url;
+                linkContainer.style.display = 'block';
+                showToast('✅ 链接已生成，点击即可下载', 'success', '🔗');
+            }
+
+            function generateNeoForgeLink() {
+                const loader = 'neoforge';
+                const mcSelect = getEl(loader, 'mc-select');
+                const pluginSelect = getEl(loader, 'plugin-select');
+                const linkContainer = getEl(loader, 'link-container');
+                const downloadLink = getEl(loader, 'download-link');
+
+                const mcVer = mcSelect.value;
+                const plugin = pluginSelect.value;
+                if (!mcVer || !plugin) {
+                    showToast('请选择完整的版本信息', 'error', '❌');
+                    return;
+                }
+
+                const repoName = `MDK-${mcVer}-${plugin}`;
+                const url = `https://github.com/NeoForgeMDKs/${repoName}/archive/refs/heads/main.zip`;
+                downloadLink.href = url;
+                downloadLink.textContent = url;
+                linkContainer.style.display = 'block';
+                showToast('✅ 链接已生成，点击即可下载', 'success', '🔗');
+            }
+
+            function manualGenerateLink(loader) {
+                const mcInput = getEl(loader, 'manual-mc');
+                const buildInput = getEl(loader, 'manual-build');
+                const linkContainer = getEl(loader, 'link-container');
+                const downloadLink = getEl(loader, 'download-link');
+
+                const mcVer = mcInput.value.trim();
+                const build = buildInput.value.trim();
+                if (!mcVer || !build) {
+                    showToast('请填写完整的版本信息', 'error', '❌');
+                    return;
+                }
+
+                let url;
+                if (loader === 'forge') {
+                    const fullBuild = `${mcVer}-${build}`;
+                    url =
+                        `https://files.minecraftforge.net/maven/net/minecraftforge/forge/${fullBuild}/forge-${fullBuild}-mdk.zip`;
+                } else if (loader === 'neoforge') {
+                    const repoName = `MDK-${mcVer}-${build}`;
+                    url = `https://github.com/NeoForgeMDKs/${repoName}/archive/refs/heads/main.zip`;
+                }
+
+                if (!url) {
+                    showToast('不支持的加载器', 'error', '❌');
+                    return;
+                }
+
+                downloadLink.href = url;
+                downloadLink.textContent = url;
+                linkContainer.style.display = 'block';
+                showToast('✅ 链接已生成，点击即可下载', 'success', '🔗');
+            }
+
+            function copyLink(loader) {
+                const downloadLink = getEl(loader, 'download-link');
+                const url = downloadLink.href;
+                if (!url || url === '#') {
+                    showToast('请先生成链接', 'error', '❌');
+                    return;
+                }
+                navigator.clipboard.writeText(url).then(() => {
+                    showToast('✅ 已复制到剪贴板', 'success', '📋');
+                }).catch(() => {
+                    const ta = document.createElement('textarea');
+                    ta.value = url;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    showToast('✅ 已复制到剪贴板', 'success', '📋');
+                });
+            }
+
+            // ========== Forge 导入 ==========
+            function applyForgeImport() {
+                const loader = 'forge';
+                const textarea = getEl(loader, 'import-area');
+                const status = getEl(loader, 'import-status');
+                const raw = textarea.value.trim();
+                if (!raw) {
+                    status.textContent = '⚠️ 请粘贴数据';
+                    status.className = 'import-status error';
+                    return;
+                }
+
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+                        status.textContent = '⚠️ 格式不正确，应为 { "mc版本": ["构建号", ...] }';
+                        status.className = 'import-status error';
+                        return;
+                    }
+
+                    let versionCount = 0,
+                        buildCount = 0;
+                    for (const k of Object.keys(parsed)) {
+                        if (!Array.isArray(parsed[k])) {
+                            status.textContent = '⚠️ 格式不正确，每个值应为数组';
+                            status.className = 'import-status error';
+                            return;
+                        }
+                        parsed[k].forEach(item => {
+                            if (typeof item !== 'string') {
+                                status.textContent = '⚠️ 构建号应为字符串';
+                                status.className = 'import-status error';
+                                return;
+                            }
+                            buildCount++;
+                        });
+                        versionCount++;
+                    }
+
+                    dataStore[loader] = parsed;
+                    populateForge();
+                    status.textContent = `✅ 成功导入 ${versionCount} 个版本，共 ${buildCount} 个构建号`;
+                    status.className = 'import-status success';
+                    showToast(`✅ ${loader} 版本列表已更新`, 'success', '📥');
+
+                } catch (err) {
+                    status.textContent = '❌ 解析失败: ' + err.message;
+                    status.className = 'import-status error';
+                }
+            }
+
+            function resetForgeBuiltin() {
+                const loader = 'forge';
+                dataStore[loader] = {};
+                populateForge();
+                const status = getEl(loader, 'import-status');
+                status.textContent = '✅ 已清空数据，请重新导入或手动输入';
+                status.className = 'import-status success';
+                showToast(`✅ ${loader} 数据已清空`, 'success', '↺');
+                const textarea = getEl(loader, 'import-area');
+                if (textarea) textarea.value = '';
+            }
+
+            // ========== NeoForge GitHub 刷新 ==========
+            async function fetchNeoForgeVersions() {
+                const refreshBtn = document.getElementById('refreshNeoForgeBtn');
+                const status = document.getElementById('neoforgeRefreshStatus');
+                refreshBtn.disabled = true;
+                status.textContent = '⏳ 正在从 GitHub 获取...';
+                status.className = 'refresh-status';
+
+                try {
+                    const response = await fetch('https://api.github.com/orgs/NeoForgeMDKs/repos?per_page=100');
+                    if (!response.ok) {
+                        throw new Error(`GitHub API 返回 ${response.status}`);
+                    }
+                    const repos = await response.json();
+
+                    const versionMap = {};
+                    repos.forEach(repo => {
+                        const name = repo.name;
+                        if (name.startsWith('MDK-')) {
+                            const parts = name.split('-');
+                            if (parts.length >= 3) {
+                                const mcVersion = parts.slice(1, -1).join('-');
+                                const pluginType = parts[parts.length - 1];
+                                if (!versionMap[mcVersion]) {
+                                    versionMap[mcVersion] = [];
+                                }
+                                if (!versionMap[mcVersion].includes(pluginType)) {
+                                    versionMap[mcVersion].push(pluginType);
+                                }
+                            }
+                        }
+                    });
+
+                    if (Object.keys(versionMap).length === 0) {
+                        throw new Error('未解析到任何版本');
+                    }
+
+                    dataStore.neoforge = versionMap;
+                    populateNeoForge(versionMap);
+                    status.textContent = `✅ 已更新 (${Object.keys(versionMap).length} 个版本)`;
+                    status.className = 'refresh-status success';
+                    showToast('✅ NeoForge 版本列表已刷新', 'success', '🔄');
+
+                } catch (err) {
+                    console.error(err);
+                    status.textContent = `⚠️ 获取失败: ${err.message}，使用内置列表`;
+                    status.className = 'refresh-status error';
+                    dataStore.neoforge = JSON.parse(JSON.stringify(BUILTIN.neoforge));
+                    populateNeoForge(dataStore.neoforge);
+                    showToast('使用内置列表，请稍后再试刷新', 'error', '⚠️');
+                } finally {
+                    refreshBtn.disabled = false;
+                }
+            }
+
+            // ========== Toast ==========
+            function showToast(msg, type = 'info', icon = 'ℹ️') {
+                const toast = document.getElementById('toast');
+                const toastIcon = document.getElementById('toastIcon');
+                const toastMsg = document.getElementById('toastMsg');
+                toast.className = 'toast visible ' + type;
+                toastIcon.textContent = icon;
+                toastMsg.textContent = msg;
+            }
+
+            function hideToast() {
+                document.getElementById('toast').className = 'toast';
+            }
+
+            // ========== ZIP 处理（全局） ==========
+            let currentZipData = null;
+            let currentFileName = '';
+            let currentGradleVersion = '';
+            let isProcessing = false;
+
+            function formatSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / 1048576).toFixed(1) + ' MB';
+            }
+
+            function setStatus(text, type = 'info') {
+                const status = document.getElementById('fileStatus');
+                status.textContent = text;
+                status.className = 'file-status ' + type;
+            }
+
+            function resetUI() {
+                document.getElementById('fileCard').classList.remove('visible');
+                document.getElementById('diffSection').classList.remove('visible');
+                document.getElementById('actions').classList.remove('visible');
+                hideToast();
+                currentZipData = null;
+                currentFileName = '';
+                currentGradleVersion = '';
+                isProcessing = false;
+                document.getElementById('downloadBtn').disabled = false;
+                document.getElementById('replaceBtn').disabled = false;
+            }
+
+            function showError(msg) {
+                showToast(msg, 'error', '❌');
+                setStatus('处理失败', 'error');
+                document.getElementById('actions').classList.remove('visible');
+                document.getElementById('diffSection').classList.remove('visible');
+            }
+
+            async function processZip(file) {
+                if (!file) return;
+                if (!file.name.toLowerCase().endsWith('.zip')) {
+                    showError('请上传 .zip 格式的文件');
+                    return;
+                }
+                if (file.size > 100 * 1024 * 1024) {
+                    showError('文件大小超过 100MB');
+                    return;
+                }
+
+                hideToast();
+                isProcessing = true;
+                setStatus('读取中...', 'info');
+                document.getElementById('downloadBtn').disabled = true;
+                document.getElementById('replaceBtn').disabled = true;
+
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const zip = await JSZip.loadAsync(arrayBuffer);
+                    const entries = Object.keys(zip.files);
+
+                    const targetPath = 'gradle/wrapper/gradle-wrapper.properties';
+                    const altPath = 'gradle\\wrapper\\gradle-wrapper.properties';
+                    let propFile = zip.files[targetPath] || zip.files[altPath];
+                    if (!propFile) {
+                        const found = entries.find(k =>
+                            k.replace(/\\/g, '/').endsWith('gradle/wrapper/gradle-wrapper.properties')
+                        );
+                        if (found) propFile = zip.files[found];
+                    }
+                    if (!propFile) {
+                        showError('未找到 gradle-wrapper.properties，请确认是有效的 MDK ZIP');
+                        isProcessing = false;
+                        document.getElementById('downloadBtn').disabled = false;
+                        document.getElementById('replaceBtn').disabled = false;
+                        return;
+                    }
+
+                    const content = await propFile.async('string');
+                    const lines = content.split(/\r?\n/);
+                    let urlLineIndex = -1;
+                    let oldDistributionUrl = '';
+                    const urlPrefix = 'distributionUrl=';
+                    const gradlePattern = /gradle-([\d.]+)-?([a-z]+)?\.zip/i;
+
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (line.startsWith(urlPrefix)) {
+                            urlLineIndex = i;
+                            oldDistributionUrl = line.substring(urlPrefix.length).trim();
+                            break;
+                        }
+                    }
+                    if (urlLineIndex === -1 || !oldDistributionUrl) {
+                        showError('未找到 distributionUrl 配置项');
+                        isProcessing = false;
+                        document.getElementById('downloadBtn').disabled = false;
+                        document.getElementById('replaceBtn').disabled = false;
+                        return;
+                    }
+
+                    const match = oldDistributionUrl.match(gradlePattern);
+                    if (!match) {
+                        showError('无法解析 Gradle 版本');
+                        isProcessing = false;
+                        document.getElementById('downloadBtn').disabled = false;
+                        document.getElementById('replaceBtn').disabled = false;
+                        return;
+                    }
+                    currentGradleVersion = match[1];
+
+                    const fileNameFromUrl = oldDistributionUrl.split('/').pop();
+                    const newDistributionUrl = `https\\://mirrors.cloud.tencent.com/gradle/${fileNameFromUrl}`;
+
+                    if (oldDistributionUrl.includes('mirrors.cloud.tencent.com')) {
+                        showToast('已使用腾讯云镜像，无需修改', 'info', '✅');
+                        setStatus('已是腾讯云镜像', 'success');
+                        document.getElementById('diffSection').classList.remove('visible');
+                        document.getElementById('actions').classList.remove('visible');
+                        isProcessing = false;
+                        document.getElementById('downloadBtn').disabled = false;
+                        document.getElementById('replaceBtn').disabled = false;
+                        return;
+                    }
+
+                    const newContent = content.replace(
+                        /distributionUrl=.*/,
+                        `distributionUrl=${newDistributionUrl}`
+                    );
+                    zip.file(propFile.name, newContent);
+
+                    const newZipBlob = await zip.generateAsync({
+                        type: 'blob',
+                        compression: 'DEFLATE',
+                        compressionOptions: { level: 6 }
+                    });
+                    const newZipBuffer = await newZipBlob.arrayBuffer();
+                    currentZipData = new Uint8Array(newZipBuffer);
+                    currentFileName = file.name;
+
+                    document.getElementById('fileName').textContent = file.name;
+                    document.getElementById('fileSize').textContent = formatSize(file.size);
+                    document.getElementById('fileCard').classList.add('visible');
+                    setStatus('✅ 就绪', 'success');
+
+                    document.getElementById('oldUrl').textContent = oldDistributionUrl;
+                    document.getElementById('newUrl').textContent = newDistributionUrl;
+                    document.getElementById('versionBadge').textContent = `Gradle ${currentGradleVersion}`;
+                    document.getElementById('diffSection').classList.add('visible');
+                    document.getElementById('actions').classList.add('visible');
+
+                    showToast(`✅ 解析成功，Gradle ${currentGradleVersion}`, 'success', '🎯');
+                    document.getElementById('downloadBtn').disabled = false;
+                    document.getElementById('replaceBtn').disabled = false;
+                    isProcessing = false;
+
+                } catch (err) {
+                    console.error(err);
+                    showError('处理失败: ' + err.message);
+                    isProcessing = false;
+                    document.getElementById('downloadBtn').disabled = false;
+                    document.getElementById('replaceBtn').disabled = false;
+                }
+            }
+
+            function downloadNewZip() {
+                if (!currentZipData) {
+                    showToast('没有可下载的数据', 'error', '❌');
+                    return;
+                }
+                try {
+                    const blob = new Blob([currentZipData], { type: 'application/zip' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    const baseName = currentFileName.replace(/\.zip$/i, '');
+                    a.download = `${baseName}_mirrored.zip`;
+                    a.href = url;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 5000);
+                    showToast('✅ 下载已开始', 'success', '⬇️');
+                } catch (err) {
+                    console.error(err);
+                    showToast('下载失败: ' + err.message, 'error', '❌');
+                }
+            }
+
+            async function replaceOriginalFile() {
+                if (!currentZipData) {
+                    showToast('没有可替换的数据', 'error', '❌');
+                    return;
+                }
+                if (!('showOpenFilePicker' in window)) {
+                    showToast('当前浏览器不支持替换原文件，请使用"下载新 ZIP"', 'error', '⚠️');
+                    return;
+                }
+                try {
+                    document.getElementById('replaceBtn').disabled = true;
+                    showToast('请选择要替换的 ZIP 文件', 'info', '📂');
+                    const [fileHandle] = await window.showOpenFilePicker({
+                        types: [{ description: 'ZIP 文件', accept: { 'application/zip': ['.zip'] } }],
+                        multiple: false,
+                    });
+                    if (!fileHandle.name.toLowerCase().endsWith('.zip')) {
+                        showToast('请选择 .zip 文件', 'error', '❌');
+                        document.getElementById('replaceBtn').disabled = false;
+                        return;
+                    }
+                    const writable = await fileHandle.createWritable({ keepExistingData: false });
+                    const blob = new Blob([currentZipData], { type: 'application/zip' });
+                    await writable.write(blob);
+                    await writable.close();
+                    showToast(`✅ 替换成功: ${fileHandle.name}`, 'success', '🎉');
+                    document.getElementById('replaceBtn').disabled = false;
+                    document.getElementById('fileName').textContent = fileHandle.name + ' (已替换)';
+                    document.getElementById('fileSize').textContent = formatSize(currentZipData.length);
+                } catch (err) {
+                    if (err.name === 'AbortError' || err.name === 'SecurityError') {
+                        showToast('操作已取消', 'info', 'ℹ️');
+                    } else {
+                        console.error(err);
+                        showToast('替换失败: ' + err.message, 'error', '❌');
+                    }
+                    document.getElementById('replaceBtn').disabled = false;
+                }
+            }
+
+            // ========== 拖拽事件 ==========
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const browseBtn = document.getElementById('browseBtn');
+
+            browseBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileInput.click();
+            });
+            dropZone.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    resetUI();
+                    processZip(file);
+                }
+                fileInput.value = '';
+            });
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+            });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                const items = e.dataTransfer.items;
+                if (items.length > 0) {
+                    const item = items[0];
+                    if (item.kind === 'file') {
+                        const file = item.getAsFile();
+                        if (file) {
+                            resetUI();
+                            processZip(file);
+                        }
+                    }
+                }
+            });
+            document.addEventListener('dragover', (e) => e.preventDefault());
+            document.addEventListener('drop', (e) => e.preventDefault());
+
+            document.getElementById('downloadBtn').addEventListener('click', downloadNewZip);
+            document.getElementById('replaceBtn').addEventListener('click', replaceOriginalFile);
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                resetUI();
+                fileInput.value = '';
+                showToast('已重置', 'info', '🔄');
+            });
+
+            document.addEventListener('paste', (e) => {
+                const items = e.clipboardData && e.clipboardData.items;
+                if (items) {
+                    for (const item of items) {
+                        if (item.kind === 'file') {
+                            const file = item.getAsFile();
+                            if (file && file.name.toLowerCase().endsWith('.zip')) {
+                                resetUI();
+                                processZip(file);
+                                e.preventDefault();
+                                break;
+                            }
+                        }
+                    }
+                }
+            });
+
+            // ========== 事件绑定（Forge & NeoForge） ==========
+            // Forge
+            const forgeMcSelect = getEl('forge', 'mc-select');
+            forgeMcSelect.addEventListener('change', function () {
+                const selected = this.value;
+                if (selected) {
+                    updateForgeBuilds('forge', selected);
+                    const linkContainer = getEl('forge', 'link-container');
+                    if (linkContainer) linkContainer.style.display = 'none';
+                }
+            });
+            getEl('forge', 'build-select').addEventListener('change', function () {
+                const linkContainer = getEl('forge', 'link-container');
+                if (linkContainer) linkContainer.style.display = 'none';
+            });
+            getEl('forge', 'generate-btn').addEventListener('click', generateForgeLink);
+            getEl('forge', 'manual-generate').addEventListener('click', function () {
+                manualGenerateLink('forge');
+            });
+            getEl('forge', 'manual-build').addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') manualGenerateLink('forge');
+            });
+            getEl('forge', 'manual-mc').addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') manualGenerateLink('forge');
+            });
+            getEl('forge', 'copy-link').addEventListener('click', function () {
+                copyLink('forge');
+            });
+            let forgeImportOpen = false;
+            getEl('forge', 'import-toggle').addEventListener('click', function () {
+                forgeImportOpen = !forgeImportOpen;
+                getEl('forge', 'import-body').classList.toggle('open', forgeImportOpen);
+                getEl('forge', 'import-arrow').classList.toggle('open', forgeImportOpen);
+            });
+            getEl('forge', 'import-apply').addEventListener('click', applyForgeImport);
+            getEl('forge', 'import-reset').addEventListener('click', resetForgeBuiltin);
+
+            // NeoForge
+            const neoMcSelect = getEl('neoforge', 'mc-select');
+            neoMcSelect.addEventListener('change', function () {
+                const selected = this.value;
+                if (selected) {
+                    updateNeoForgePlugins(dataStore.neoforge, selected);
+                    const linkContainer = getEl('neoforge', 'link-container');
+                    if (linkContainer) linkContainer.style.display = 'none';
+                }
+            });
+            getEl('neoforge', 'plugin-select').addEventListener('change', function () {
+                const linkContainer = getEl('neoforge', 'link-container');
+                if (linkContainer) linkContainer.style.display = 'none';
+            });
+            getEl('neoforge', 'generate-btn').addEventListener('click', generateNeoForgeLink);
+            getEl('neoforge', 'manual-generate').addEventListener('click', function () {
+                manualGenerateLink('neoforge');
+            });
+            getEl('neoforge', 'manual-build').addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') manualGenerateLink('neoforge');
+            });
+            getEl('neoforge', 'manual-mc').addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') manualGenerateLink('neoforge');
+            });
+            getEl('neoforge', 'copy-link').addEventListener('click', function () {
+                copyLink('neoforge');
+            });
+            document.getElementById('refreshNeoForgeBtn').addEventListener('click', fetchNeoForgeVersions);
+
+            // ========== 标签页切换 ==========
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function () {
+                    const target = this.dataset.tab;
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    Object.keys(tabContents).forEach(key => {
+                        tabContents[key].classList.toggle('active', key === target);
+                    });
+                });
+            });
+
+            // ========== 初始化 ==========
+            populateForge(); // Forge 空数据
+            dataStore.neoforge = JSON.parse(JSON.stringify(BUILTIN.neoforge));
+            populateNeoForge(dataStore.neoforge);
+            fetchNeoForgeVersions();
+
+            console.log('✅ 工具已加载，Forge 强制用户导入或手动输入');
+
+        })();
+    </script>
+
+</body>
+
+</html>
