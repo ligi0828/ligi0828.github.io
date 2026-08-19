@@ -4,7 +4,7 @@
    Leave EMPTY to run fully offline (local demo data)
    ============================================================ */
 
-const API_BASE = "";
+const API_BASE = "https://ligi0828web.pythonanywhere.com";
 
 const API = {
   isConfigured: API_BASE.trim().length > 0,
